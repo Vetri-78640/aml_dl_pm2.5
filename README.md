@@ -14,10 +14,11 @@ data/
   processed/        folds and per-fold scalers (generated)
 src/aqf/
   config.py         config loader, project root
+  viz.py            report and notebook figures
   data/             load, clean, split, scale, audit, pipeline
 scripts/            one-off scripts (report figures)
 tests/              pytest suite for the data guarantees
-notebooks/          exploration
+notebooks/          step-by-step walkthroughs (01_data_preprocessing.ipynb)
 reports/
   preprocessing/    LaTeX report, figures, qa.json
 ```
