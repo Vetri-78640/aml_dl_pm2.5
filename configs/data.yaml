@@ -1,0 +1,18 @@
+paths:
+  raw: data/raw/PRSA_data_2010.1.1-2014.12.31.csv
+  interim: data/interim/hourly.parquet
+  processed: data/processed
+  qa: reports/preprocessing/qa.json
+
+clean:
+  ffill_limit: 3            # max hours a past pm25 value is carried forward for model inputs
+  wind_dirs: [NE, NW, SE, cv]
+
+split:
+  val_years: [2011, 2012, 2013]   # expanding-window backtest folds
+  test_year: 2014                 # untouched until final evaluation
+  gap_hours: 24                   # embargo between train and eval; must be >= longest horizon
+
+scale:
+  cols: [pm25, pm25_in, dewp, temp, pres, ws, ws_cum, snow_cum, rain_cum]
+  log: [pm25, pm25_in, ws, ws_cum, snow_cum, rain_cum]   # skew > 1 before log1p

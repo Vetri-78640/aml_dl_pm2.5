@@ -1,0 +1,19 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+.DS_Store
+.ipynb_checkpoints/
+
+data/interim/*
+data/processed/*
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+*.aux
+*.log
+*.out
+
+# local only: course documents (personal data) and duplicate of data/raw
+info_docs/
+dataset/
