@@ -6,6 +6,11 @@
 \usepackage[hidelinks]{hyperref}
 \graphicspath{{figures/}}
 
+% house style: no em dashes, so the abstract heading uses a colon
+\makeatletter
+\def\abstract{\normalfont\@IEEEabskeysecsize\bfseries\textit{\abstractname}:\ \relax\@IEEEgobbleleadPARNLSP}
+\makeatother
+
 \begin{document}
 
 \title{Leak-free data preprocessing for short-horizon PM2.5 forecasting on the Beijing PM2.5 dataset}
