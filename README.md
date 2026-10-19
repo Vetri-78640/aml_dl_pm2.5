@@ -2,7 +2,7 @@
 
 # PM2.5 forecasting with gradient boosting and LSTM models
 
-**Short-horizon air quality forecasting on five years of hourly Beijing data**
+**Short-horizon air quality forecasting on hourly Beijing data: 2010 to 2013 to build the models, 2014 held out as the test year**
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-2a78d6?style=flat-square)](pyproject.toml)
 [![Phase 1](https://img.shields.io/badge/phase_1-XGBoost-eb6834?style=flat-square)](#roadmap)
