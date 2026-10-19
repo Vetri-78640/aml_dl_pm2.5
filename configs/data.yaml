@@ -2,7 +2,7 @@ paths:
   raw: data/raw/PRSA_data_2010.1.1-2014.12.31.csv
   interim: data/interim/hourly.parquet
   processed: data/processed
-  qa: reports/preprocessing/qa.json
+  qa: reports/data/qa.json
 
 clean:
   ffill_limit: 3            # max hours a past pm25 value is carried forward for model inputs

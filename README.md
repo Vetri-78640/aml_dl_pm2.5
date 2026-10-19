@@ -32,7 +32,8 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 | Stage | Approach | Status |
 |:--|:--|:--|
 | Exploratory analysis | On the original csv: data quality on all years, then patterns on 2010 to 2013 only | Done |
-| Data preprocessing | Leak-free pipeline driven by the EDA findings, IEEE report, walkthrough notebook | Done |
+| Data preprocessing | Leak-free pipeline driven by the EDA findings, walkthrough notebook | Done |
+| Data report | One IEEE report covering EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf) | Done |
 | Phase 1 (ML) | XGBoost on lag, rolling, calendar and weather features vs persistence and seasonal-naive baselines | Next |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
@@ -100,7 +101,7 @@ flowchart LR
 | Folds | Validate on 2011, 2012, 2013; test on 2014 | Every fold sees a full seasonal cycle |
 | Scale | log1p for skewed columns, then z-score from training rows only | No statistics from evaluation years |
 
-Full reasoning, figures and numbers: [`reports/preprocessing/preprocessing.pdf`](reports/preprocessing/preprocessing.pdf).
+Full reasoning, figures and numbers for the EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf).
 
 ---
 
@@ -137,8 +138,8 @@ pytest                               # run the data tests
 
 | Task | Command |
 |:--|:--|
-| Regenerate report figures | `python scripts/plot_preprocessing.py` |
-| Rebuild the report PDF | `cd reports/preprocessing && tectonic preprocessing.tex` |
+| Regenerate report figures | `python scripts/plot_data_report.py` |
+| Rebuild the report PDF | `cd reports/data && tectonic data_report.tex` |
 | Re-run the EDA | `jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb` |
 | Re-run the preprocessing walkthrough | `jupyter nbconvert --to notebook --execute --inplace notebooks/02_data_preprocessing.ipynb` |
 
@@ -151,7 +152,7 @@ All settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold 
 | `data/interim/hourly.parquet` | cleaned hourly frame, 17 columns |
 | `data/processed/folds.json` | fold boundaries |
 | `data/processed/scalers/*.json` | one scaler per fold, fitted on training rows |
-| `reports/preprocessing/qa.json` | audit numbers used in the report |
+| `reports/data/qa.json` | audit numbers used in the report |
 
 ---
 
@@ -169,9 +170,9 @@ aml_dl_pm2.5/
 │   ├── 01_eda.ipynb               EDA on the original csv
 │   └── 02_data_preprocessing.ipynb  applies the EDA decisions
 ├── reports/
-│   └── preprocessing/             IEEE report, figures, audit summary
+│   └── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
 ├── scripts/
-│   └── plot_preprocessing.py      report figures
+│   └── plot_data_report.py        data report figures
 ├── src/aqf/
 │   ├── config.py                  config loader
 │   ├── features.py                feature builders, calendar, humidity
@@ -188,7 +189,7 @@ aml_dl_pm2.5/
 
 - [x] Exploratory data analysis on the original data
 - [x] Leak-free preprocessing pipeline
-- [x] Preprocessing report (IEEE format) and walkthrough notebook
+- [x] Walkthrough notebooks and one IEEE data report for EDA and preprocessing
 - [ ] Feature engineering: lags, rolling statistics, calendar and weather features
 - [ ] Persistence, 24-hour seasonal-naive and linear baselines
 - [ ] XGBoost with chronological tuning and feature-group ablation
