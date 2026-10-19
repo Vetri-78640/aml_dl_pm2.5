@@ -62,18 +62,18 @@ Every model is scored with rolling chronological backtests on MAE, RMSE and R2 a
 |:--|:--|
 | `pm2.5` | PM2.5 concentration, target |
 | `DEWP` / `TEMP` / `PRES` | dew point, temperature, pressure |
-| `cbwd` | wind direction: NE, NW, SE, calm |
+| `cbwd` | wind direction: NE, NW, SE, cv (calm or variable) |
 | `Iws` | cumulated wind speed |
 | `Is` / `Ir` | cumulated hours of snow / rain |
 
 </td></tr>
 </table>
 
-**What the audit found**
+**What the EDA found** (patterns measured on 2010 to 2013; the 2014 test year stays unseen)
 
-- **Strong persistence.** Autocorrelation is 0.97 at 1 hour, 0.40 at 24 hours and 0.02 at one week, so the seasonal-naive baseline uses a 24-hour lag.
-- **Daily and seasonal cycles.** Highest around midnight and in winter (February mean 126), lowest in the afternoon and in May and August (mean 80).
-- **Wind direction matters most.** Mean PM2.5 is 126 under calm wind and 70 under north-west wind.
+- **Strong persistence.** Autocorrelation is 0.96 at 1 hour, 0.39 at 24 hours and 0.01 at one week, so the seasonal-naive baseline uses a 24-hour lag.
+- **Daily and seasonal cycles.** The hourly mean peaks at 01:00 (114) and is lowest at 15:00 (86); monthly means range from 80.6 in April to 115.1 in October. Winter and summer have opposite daily shapes.
+- **Wind and humidity drive pollution.** Mean PM2.5 is 127 under calm wind and 69 under north-west wind, and relative humidity has the strongest rank correlation with PM2.5 (0.54).
 - **Running totals, not readings.** `Iws`, `Is` and `Ir` accumulate until the wind direction or weather changes, so they are decoded before use.
 - **Heavy right tail.** Skewness 1.8, reduced to -0.3 by log1p. The two highest values fall in the first hours of the Lunar New Year and are kept as real episodes.
 
@@ -120,7 +120,7 @@ Each training span stops 24 hours before its evaluation year, so no training tar
 
 - the filled input at hour t is identical whether or not later hours exist
 - folds never overlap and respect the embargo
-- scaler statistics do not change when evaluation rows change
+- scaler statistics do not change when evaluation or later rows change
 - the target label is never modified
 
 ---
@@ -215,7 +215,7 @@ aml_dl_pm2.5/
 ## References
 
 1. S. Chen, "Beijing PM2.5," UCI Machine Learning Repository, 2015. [doi:10.24432/C5JS49](https://doi.org/10.24432/C5JS49). Licensed CC BY 4.0.
-2. X. Liang et al., "Assessing Beijing's PM2.5 pollution: severity, weather impact, APEC and winter heating," *Proc. Royal Society A*, 2015.
+2. X. Liang et al., "Assessing Beijing's PM2.5 pollution: severity, weather impact, APEC and winter heating," *Proc. R. Soc. A*, vol. 471, no. 2182, 2015.
 3. R. J. Hyndman and G. Athanasopoulos, *Forecasting: Principles and Practice*, 3rd ed., OTexts, 2021.
 4. T. Chen and C. Guestrin, "XGBoost: A scalable tree boosting system," *KDD*, 2016.
 5. S. Hochreiter and J. Schmidhuber, "Long short-term memory," *Neural Computation*, 1997.
