@@ -1,0 +1,63 @@
+{
+  "select": "rmse",
+  "xgb": {
+    "1": {
+      "max_depth": 6,
+      "min_child_weight": 1,
+      "subsample": 0.6,
+      "colsample_bytree": 0.7,
+      "reg_lambda": 10.0
+    },
+    "6": {
+      "max_depth": 4,
+      "min_child_weight": 20,
+      "subsample": 1.0,
+      "colsample_bytree": 0.5,
+      "reg_lambda": 1.0
+    },
+    "24": {
+      "max_depth": 4,
+      "min_child_weight": 20,
+      "subsample": 0.6,
+      "colsample_bytree": 0.5,
+      "reg_lambda": 10.0
+    }
+  },
+  "xgb_target": {
+    "1": "change",
+    "6": "level",
+    "24": "change"
+  },
+  "xgb_log_target": false,
+  "ridge": {
+    "1": {
+      "alpha": 10.0,
+      "log_target": false
+    },
+    "6": {
+      "alpha": 10.0,
+      "log_target": false
+    },
+    "24": {
+      "alpha": 1000.0,
+      "log_target": false
+    }
+  },
+  "blend": {
+    "1": {
+      "xgb_seeds": 0.7,
+      "spike": 0.0,
+      "ridge": 0.3
+    },
+    "6": {
+      "xgb_seeds": 0.6,
+      "spike": 0.0,
+      "ridge": 0.4
+    },
+    "24": {
+      "xgb_seeds": 0.3,
+      "spike": 0.0,
+      "ridge": 0.7
+    }
+  }
+}

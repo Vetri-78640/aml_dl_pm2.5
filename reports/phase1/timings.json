@@ -1,0 +1,12 @@
+{
+  "features": 0.0,
+  "datasets": 0.1,
+  "baselines": 0.1,
+  "ridge": 3.7,
+  "xgb search": 236.4,
+  "xgb seeds and spike": 31.7,
+  "horizon sweep": 2.8,
+  "ablation": 83.4,
+  "importance": 1.7,
+  "test 2014": 39.5
+}
