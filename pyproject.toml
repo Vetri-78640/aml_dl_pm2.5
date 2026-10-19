@@ -13,7 +13,9 @@ dependencies = [
     "pyarrow>=14",
     "pyyaml>=6",
     "matplotlib>=3.8",
+    "scikit-learn>=1.4",
     "statsmodels>=0.14",
+    "xgboost>=2.0",
 ]
 
 [project.optional-dependencies]
