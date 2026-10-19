@@ -5,6 +5,7 @@ import pytest
 from aqf.config import load_config
 from aqf.data import Scaler, clean, fold_mask, load_raw, make_folds
 from aqf.data.clean import fill_target
+from aqf.data.pipeline import fit_scalers
 
 CFG = load_config("configs/data.yaml")
 
@@ -64,14 +65,15 @@ def test_folds_are_chronological_with_gap(df):
         assert not fold_mask(df.index, f["train"])[fold_mask(df.index, folds[-1]["eval"])].any()
 
 
-def test_scaler_ignores_eval_rows(df):
-    f = make_folds(df.index, **CFG["split"])[0]
-    tr = fold_mask(df.index, f["train"])
-    a = Scaler(**CFG["scale"]).fit(df[tr])
-    noisy = df.copy()
-    noisy.loc[~tr, "temp"] += 100
-    b = Scaler(**CFG["scale"]).fit(noisy[tr])
-    assert a.mean == b.mean and a.std == b.std
+def test_scalers_ignore_eval_and_later_rows(df):
+    folds = make_folds(df.index, **CFG["split"])
+    a = fit_scalers(df, folds, CFG["scale"])
+    for f in folds:
+        noisy = df.copy()
+        later = df.index >= pd.Timestamp(f["train"][1])
+        noisy.loc[later, ["temp", "pm25", "pm25_in"]] += 100
+        b = fit_scalers(noisy, [f], CFG["scale"])[f["name"]]
+        assert a[f["name"]].mean == b.mean and a[f["name"]].std == b.std
 
 
 def test_scaler_round_trip(df, tmp_path):
