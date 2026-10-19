@@ -34,7 +34,7 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 | Exploratory analysis | On the original csv: data quality on all years, then patterns on 2010 to 2013 only | Done |
 | Data preprocessing | Leak-free pipeline driven by the EDA findings, walkthrough notebook | Done |
 | Data report | One IEEE report covering EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf) | Done |
-| Phase 1 (ML) | XGBoost on lag, rolling, calendar and weather features vs persistence and seasonal-naive baselines | Next |
+| Phase 1 (ML) | XGBoost and Ridge on lag, rolling, calendar, weather and physics features vs persistence and seasonal-naive baselines: [`notebooks/03_phase1_models.ipynb`](notebooks/03_phase1_models.ipynb) | Done, 2014 scored |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
 Every model is scored with rolling chronological backtests on MAE, RMSE and R2 at a fixed horizon, on exactly the same hours.
@@ -125,6 +125,20 @@ Each training span stops 24 hours before its evaluation year, so no training tar
 
 ---
 
+## Phase 1 results
+
+Every choice (settings, target form, Ridge alpha, blend weights) was made on 2011 to 2013 by RMSE. The 2014 test year was then scored once. The selected model is a blend of a 5-seed XGBoost ensemble and Ridge.
+
+| Horizon | Persistence RMSE | Best model RMSE | Better by | R2 | MAE |
+|:--|--:|--:|--:|--:|--:|
+| 1 h | 21.98 | 20.64 | 6.1% | 0.951 | 11.30 |
+| **6 h** | 61.22 | **51.96** | **15.1%** | **0.690** | 33.93 |
+| 24 h | 99.02 | 81.49 | 17.7% | 0.241 | 59.78 |
+
+Units are µg/m³. After the PM2.5 lags, weather adds the most of any feature group; the physics group (stagnation, southerly transport, humid hours) adds a little more. Validation scores, ablation and feature importance are in [`reports/phase1/`](reports/phase1/).
+
+---
+
 ## Quick start
 
 ```bash
@@ -133,7 +147,7 @@ cd aml_dl_pm2.5
 pip install -e ".[dev]"
 
 python -m aqf.data.pipeline          # build data/interim and data/processed
-pytest                               # run the data tests
+pytest                               # run the tests
 ```
 
 | Task | Command |
@@ -143,7 +157,7 @@ pytest                               # run the data tests
 | Re-run the EDA | `jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb` |
 | Re-run the preprocessing walkthrough | `jupyter nbconvert --to notebook --execute --inplace notebooks/02_data_preprocessing.ipynb` |
 
-All settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold years, embargo length and scaled columns.
+Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold years, embargo length and scaled columns. Model settings live in [`configs/phase1.yaml`](configs/phase1.yaml): horizons, features, selection metric, search space and seeds.
 
 **Outputs**
 
@@ -153,6 +167,7 @@ All settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold 
 | `data/processed/folds.json` | fold boundaries |
 | `data/processed/scalers/*.json` | one scaler per fold, fitted on training rows |
 | `reports/data/qa.json` | audit numbers used in the report |
+| `reports/phase1/` | validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
 
 ---
 
@@ -161,25 +176,31 @@ All settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold 
 ```
 aml_dl_pm2.5/
 ├── configs/
-│   └── data.yaml                  pipeline settings
+│   ├── data.yaml                  pipeline settings
+│   └── phase1.yaml                model settings
 ├── data/
 │   ├── raw/                       original csv, never modified
 │   ├── interim/                   cleaned hourly frame (generated)
 │   └── processed/                 folds and per-fold scalers (generated)
 ├── notebooks/
 │   ├── 01_eda.ipynb               EDA on the original csv
-│   └── 02_data_preprocessing.ipynb  applies the EDA decisions
+│   ├── 02_data_preprocessing.ipynb  applies the EDA decisions
+│   └── 03_phase1_models.ipynb     baselines, Ridge, XGBoost, 2014 test
 ├── reports/
-│   └── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
+│   ├── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
+│   └── phase1/                    validation and test scores
 ├── scripts/
 │   └── plot_data_report.py        data report figures
 ├── src/aqf/
 │   ├── config.py                  config loader
-│   ├── features.py                feature builders, calendar, humidity
+│   ├── features.py                feature builders, calendar, humidity, physics
+│   ├── models.py                  baselines, Ridge, XGBoost
+│   ├── metrics.py                 MAE, RMSE, R2, bias
 │   ├── viz.py                     shared figures
 │   └── data/                      load, clean, split, scale, audit, pipeline
 ├── tests/
-│   └── test_data.py
+│   ├── test_data.py
+│   └── test_features.py
 └── pyproject.toml
 ```
 
@@ -190,9 +211,9 @@ aml_dl_pm2.5/
 - [x] Exploratory data analysis on the original data
 - [x] Leak-free preprocessing pipeline
 - [x] Walkthrough notebooks and one IEEE data report for EDA and preprocessing
-- [ ] Feature engineering: lags, rolling statistics, calendar and weather features
-- [ ] Persistence, 24-hour seasonal-naive and linear baselines
-- [ ] XGBoost with chronological tuning and feature-group ablation
+- [x] Feature engineering: lags, rolling statistics, calendar, weather and physics features
+- [x] Persistence, 24-hour seasonal-naive and linear baselines
+- [x] XGBoost with chronological tuning and feature-group ablation
 - [ ] Phase 1 report and presentation
 - [ ] LSTM or temporal CNN on fixed windows
 - [ ] ML + DL hybrid with ablation studies
