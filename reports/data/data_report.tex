@@ -169,7 +169,7 @@ log1p & $-0.29$ & 0.48 & 0.67 & 12.19 & 6.01 \\
 \label{sec:patterns}
 
 \subsection{Level and trend}
-There is no trend across the development years: the yearly mean is 104.1, 99.1, 90.6 and 101.7~\ugm{} for 2010 to 2013. The variation sits inside each year, with daily means moving from clean days to several hundred within a week (Fig.~\ref{fig:daily}). Using the PM2.5 breakpoints of China's air quality standard HJ 633-2012 \cite{hj633} on single hours (the standard uses 24-hour means, so this is for context only), 51.4\% of hours are excellent or good ($\le 75$) and 21.9\% are heavily or severely polluted ($>150$).
+There is no trend across the development years: the yearly mean is 104.0, 99.1, 90.5 and 101.7~\ugm{} for 2010 to 2013. The variation sits inside each year, with daily means moving from clean days to several hundred within a week (Fig.~\ref{fig:daily}). Using the PM2.5 breakpoints of China's air quality standard HJ 633-2012 \cite{hj633} on single hours (the standard uses 24-hour means, so this is for context only; on 2026-03-01 it was replaced by HJ 633-2026, which revises the PM2.5 limits), 51.4\% of hours are excellent or good ($\le 75$) and 21.9\% are heavily or severely polluted ($>150$).
 
 \begin{figure}[!t]
 \centering
@@ -215,7 +215,7 @@ Horizon (h) & 1 & 2 & 3 & 6 & 12 & 24 \\
 \midrule
 Persistence MAE & 13.1 & 20.8 & 27.0 & 40.8 & 56.4 & 69.8 \\
 Seasonal-naive MAE & 69.8 & 69.9 & 69.9 & 69.9 & 69.8 & 69.8 \\
-Lag-$h$ correlation & 0.96 & 0.92 & 0.87 & 0.74 & 0.55 & 0.39 \\
+Lag-$h$ correlation (raw) & 0.96 & 0.92 & 0.87 & 0.74 & 0.55 & 0.39 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -306,7 +306,7 @@ New Year's day & Peak & Peak hour & Median, $\pm$8 days \\
 \end{table}
 
 \subsection{Redundancy and stationarity}
-Dew point, temperature and pressure move together (Pearson $|r|$ from 0.78 to 0.83), which does not hurt tree models but makes linear coefficients unstable, so linear models need regularisation. An augmented Dickey-Fuller test \cite{dickey1979} on daily mean log1p(pm25) gives a statistic of $-22.2$ ($p<0.001$, \num{1422} days): the series is stationary around a stable level, so models can work on log1p levels with lags and no differencing.
+Dew point, temperature and pressure move together (Pearson $|r|$ from 0.78 to 0.83), which does not hurt tree models but makes linear coefficients unstable, so linear models need regularisation. An augmented Dickey-Fuller test \cite{dickey1979} on daily mean log1p(pm25) gives a statistic of $-22.2$ ($p<0.001$, \num{1424} daily means): the series is stationary around a stable level, so models can work on log1p levels with lags and no differencing.
 
 \section{Preprocessing}
 \label{sec:prep}
@@ -346,7 +346,7 @@ The label pm25 is never filled; a missing label means the hour is excluded from 
 staying missing otherwise. This recovers 386 input hours; \num{1681} stay missing for the model stage (XGBoost handles missing inputs natively).
 
 \subsection{Chronological folds with an embargo}
-Following rolling-origin evaluation \cite{tashman2000,hyndman2021}, fold $k$ evaluates on calendar year $Y_k$ and trains on all hours in $[t_0,\ s_k - G)$, where $s_k$ is 1 January of $Y_k$ and $G = 24$ hours is an embargo \cite{lopezdeprado2018}. With $G$ at least the forecast horizon, no training target falls inside the evaluation year. Whole years give every fold a full seasonal cycle, and 2014 is the test year (Fig.~\ref{fig:folds}, Table~\ref{tab:folds}).
+Following rolling-origin evaluation \cite{tashman2000,hyndman2021}, fold $k$ evaluates on calendar year $Y_k$ and trains on all hours in $[t_0,\ s_k - G)$, where $s_k$ is 1 January of $Y_k$ and $G = 24$ hours is a gap that we call the embargo. With $G$ at least the forecast horizon, every training row whose target would fall inside the evaluation year is dropped, which L\'{o}pez de Prado calls purging \cite{lopezdeprado2018}. Whole years give every fold a full seasonal cycle, and 2014 is the test year (Fig.~\ref{fig:folds}, Table~\ref{tab:folds}).
 
 \begin{figure}[!t]
 \centering
@@ -411,7 +411,7 @@ Stationary series & Levels with lags, no differencing \\
 \end{table}
 
 \section{Limitations}
-The HJ 633-2012 categories are applied to single hours although the standard uses 24-hour means. The source does not state the time zone. Another UCI release of the same station \cite{fivecities} has identical weather but PM2.5 shifted by one hour relative to this file, and we cannot yet tell which label is correct; the modelling stage therefore uses weather from the hour before the forecast origin, which is safe either way. The episode definition is a working rule. The partial autocorrelation needs a gap-free series, so gaps are carried forward for that calculation only. All results come from a single station.
+The HJ 633-2012 categories are applied to single hours although the standard uses 24-hour means. The source does not state the time zone. Another UCI release of the same station \cite{fivecities} has identical dew point, temperature, pressure and wind but PM2.5 shifted by one hour relative to this file, and we cannot yet tell which label is correct; the modelling stage therefore uses weather from the hour before the forecast origin, which is safe either way. The episode definition is a working rule. The partial autocorrelation needs a gap-free series, so gaps are carried forward for that calculation only. All results come from a single station.
 
 \section{Conclusion}
 The data stage turns a raw file with running totals, uneven gaps and heavy tails into a validated hourly table, chronological folds with an embargo, and per-fold scalers, with every step justified by an EDA finding and every leakage path either tested or reviewed. The same findings fix the Phase 1 design: a six-hour headline horizon, features for persistence, cycles, wind, humidity, pressure tendency and Lunar New Year, and a log1p target checked for bias on episode hours.
