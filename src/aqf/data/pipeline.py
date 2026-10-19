@@ -16,6 +16,11 @@ from aqf.data.split import fold_mask, make_folds
 log = logging.getLogger(__name__)
 
 
+def fit_scalers(df, folds, scale_cfg):
+    """One scaler per fold, fitted on that fold's training rows only."""
+    return {f["name"]: Scaler(**scale_cfg).fit(df[fold_mask(df.index, f["train"])]) for f in folds}
+
+
 def run(cfg):
     p = cfg["paths"]
     df = clean(load_raw(p["raw"]), cfg["clean"])
@@ -31,9 +36,8 @@ def run(cfg):
               "eval": [str(t) for t in f["eval"]]} for f in folds]
     (out / "folds.json").write_text(json.dumps(spans, indent=2))
 
-    for f, s in zip(folds, spans):
-        tr = df[fold_mask(df.index, f["train"])]
-        Scaler(**cfg["scale"]).fit(tr).save(out / "scalers" / f"{f['name']}.json")
+    for (name, sc), s in zip(fit_scalers(df, folds, cfg["scale"]).items(), spans):
+        sc.save(out / "scalers" / f"{name}.json")
         log.info("fold %s: train %s -> %s, eval %s -> %s", s["name"], *s["train"], *s["eval"])
 
     p["qa"].parent.mkdir(parents=True, exist_ok=True)
