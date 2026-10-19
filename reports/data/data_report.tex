@@ -402,7 +402,7 @@ Short memory, PACF at lags 1, 2, 24, 25 & Lags 1, 2, 3, 6, 12, 24, 48 and rollin
 Persistence good at 1 h, poor at 24 h & Headline horizon 6 h; also report 1 h and 24 h \\
 Opposite daily shapes by season & Hour and month of the target hour as sine and cosine \\
 Wind, humidity, pressure tendency, age of NW spell & Weather and derived weather features \\
-Episodes and heavy winter tail & log1p target, bias check, episode-hour scores \\
+Episodes and heavy winter tail & Target transform tested, bias check, episode-hour scores \\
 Lunar New Year spikes & Lunar New Year flag \\
 Collinear weather variables & Regularised linear baseline \\
 Stationary series & Levels with lags, no differencing \\
@@ -414,7 +414,7 @@ Stationary series & Levels with lags, no differencing \\
 The HJ 633-2012 categories are applied to single hours although the standard uses 24-hour means. The source does not state the time zone. Another UCI release of the same station \cite{fivecities} has identical dew point, temperature, pressure and wind but PM2.5 shifted by one hour relative to this file, and we cannot yet tell which label is correct; the modelling stage therefore uses weather from the hour before the forecast origin, which is safe either way. The episode definition is a working rule. The partial autocorrelation needs a gap-free series, so gaps are carried forward for that calculation only. All results come from a single station.
 
 \section{Conclusion}
-The data stage turns a raw file with running totals, uneven gaps and heavy tails into a validated hourly table, chronological folds with an embargo, and per-fold scalers, with every step justified by an EDA finding and every leakage path either tested or reviewed. The same findings fix the Phase 1 design: a six-hour headline horizon, features for persistence, cycles, wind, humidity, pressure tendency and Lunar New Year, and a log1p target checked for bias on episode hours.
+The data stage turns a raw file with running totals, uneven gaps and heavy tails into a validated hourly table, chronological folds with an embargo, and per-fold scalers, with every step justified by an EDA finding and every leakage path either tested or reviewed. The same findings fix the Phase 1 design: a six-hour headline horizon, features for persistence, cycles, wind, humidity, pressure tendency and Lunar New Year, and a target transform (log1p or raw) chosen on the validation years and checked for bias on episode hours.
 
 \begin{thebibliography}{99}
 \bibitem{uci} S. Chen, ``Beijing PM2.5,'' UCI Machine Learning Repository, 2015, doi: 10.24432/C5JS49.
