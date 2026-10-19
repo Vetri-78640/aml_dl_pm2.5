@@ -54,7 +54,7 @@ rain\_cum & Ir & cumulated hours of rain \\
 \begin{itemize}
 \item \textbf{Time grid.} Timestamps form a complete, unique hourly grid, so no resampling is needed. The time zone is not stated in the source.
 \item \textbf{Missing values.} Only pm25 is missing: \num{2067} hours (4.72\%) in 214 gaps. Of these, 112 gaps last one hour, 143 last at most three hours, and 20 exceed 24 hours. The longest gap is 155 hours from 2010-09-21 05:00. Missingness falls from 669, 728 and 489 hours in 2010-2012 to 82 and 99 in 2013-2014 (Fig.~\ref{fig:missing}).
-\item \textbf{Skew.} pm25 has median 72, 99th percentile 420 and maximum 994, with skewness 1.80; log1p reduces it to $-0.30$ (Fig.~\ref{fig:hist}).
+\item \textbf{Skew.} pm25 has median 72, 99th percentile 420 and maximum 994. Because the transform choice shapes the model, skew is measured on 2010 to 2013 only, keeping the 2014 test year unseen: 1.81, reduced to $-0.29$ by log1p (Fig.~\ref{fig:hist}).
 \item \textbf{Extremes.} The two highest values, 994 at 2012-01-23 01:00 and 980 at 2010-02-14 01:00, fall in the first hours of the Lunar New Year; the next highest is 886 on 2013-01-12. Neighbouring hours rise and fall with them, so we treat the extremes as real episodes and keep them.
 \item \textbf{Cumulative columns.} Iws increases in every hour that cbwd stays the same and restarts when cbwd changes. Is and Ir count consecutive snow and rain hours (98.4\% and 97.1\% of non-zero values equal the previous value plus one).
 \end{itemize}
@@ -99,7 +99,7 @@ and stays missing otherwise. Linear interpolation was rejected because it fills 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{target_hist.pdf}
-\caption{Distribution of pm25 before and after log1p.}
+\caption{Distribution of pm25 before and after log1p, 2010 to 2013.}
 \label{fig:hist}
 \end{figure}
 
