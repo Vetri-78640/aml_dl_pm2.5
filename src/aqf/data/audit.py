@@ -12,8 +12,13 @@ def gaps(miss):
 
 
 def audit(df, folds, limit):
-    """Summary numbers for the preprocessing report."""
+    """Summary numbers for the preprocessing report.
+
+    Data-quality counts cover every year. Skew backs a modelling choice (log1p),
+    so it is measured before the test year only.
+    """
     pm = df["pm25"]
+    dev = df[df.index < folds[-1]["eval"][0]]
     g = gaps(pm.isna())
     top = pm.nlargest(5)
 
@@ -35,8 +40,8 @@ def audit(df, folds, limit):
         "pm25_in_missing_after_fill": int(df["pm25_in"].isna().sum()),
         "pm25_quantiles": {str(q): float(v) for q, v in pm.quantile([0, .5, .9, .99, 1]).items()},
         "pm25_top5": {str(k): float(v) for k, v in top.items()},
-        "skew": {
-            c: {"raw": round(float(df[c].skew()), 2), "log1p": round(float(np.log1p(df[c]).skew()), 2)}
+        "skew_before_test_year": {
+            c: {"raw": round(float(dev[c].skew()), 2), "log1p": round(float(np.log1p(dev[c]).skew()), 2)}
             for c in ["pm25", "ws", "ws_cum", "snow_cum", "rain_cum"]
         },
         "ws": {k: round(float(v), 2) for k, v in df["ws"].describe().items()},

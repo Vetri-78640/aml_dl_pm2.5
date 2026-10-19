@@ -24,7 +24,7 @@ def main(cfg_path="configs/data.yaml"):
     figs = {
         "missing": viz.missing_by_month(df),
         "wind_decode": viz.wind_decode(df),
-        "target_hist": viz.target_hist(df),
+        "target_hist": viz.target_hist(df[df.index.year < cfg["split"]["test_year"]]),
         "folds": viz.fold_timeline(folds),
     }
     for name, fig in figs.items():
