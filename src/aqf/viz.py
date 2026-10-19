@@ -114,6 +114,31 @@ def fold_timeline(folds):
     return fig
 
 
+def skill_by_horizon(t, col="skill_mae"):
+    """Skill vs persistence per horizon; `t` has column h and the skill column `col`."""
+    fig, ax = plt.subplots(figsize=(W, 1.6))
+    ax.plot(t["h"], t[col], color=BLUE, lw=1.2, marker="o", ms=3)
+    ax.set_xticks(t["h"])
+    ax.set_xlabel("horizon h (hours)")
+    ax.set_ylabel("skill vs persistence")
+    ax.yaxis.set_major_formatter(mticker.PercentFormatter(1.0))
+    return fig
+
+
+def forecast_window(y, preds, start, end):
+    """Observed pm25 and up to three forecasts, all indexed by target time."""
+    fig, ax = plt.subplots(figsize=(W, 1.7))
+    ax.plot(y.loc[start:end], color=INK, lw=1.0, label="observed")
+    for (name, p), c in zip(preds.items(), [ORANGE, BLUE, AQUA]):
+        ax.plot(p.loc[start:end], color=c, lw=1.0, label=name)
+    ax.set_ylabel("pm2.5 (µg/m³)")
+    legend_top(ax, len(preds) + 1)
+    ax.grid(axis="x", visible=False)
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
+    return fig
+
+
 def daily_series(df):
     d = df["pm25"].resample("D").mean()
     fig, ax = plt.subplots(figsize=(W, 1.6))
