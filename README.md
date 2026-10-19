@@ -31,7 +31,8 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 
 | Stage | Approach | Status |
 |:--|:--|:--|
-| Data preprocessing | Leak-free pipeline, data audit, IEEE report, walkthrough notebook | Done |
+| Exploratory analysis | On the original csv: data quality on all years, then patterns on 2010 to 2013 only | Done |
+| Data preprocessing | Leak-free pipeline driven by the EDA findings, IEEE report, walkthrough notebook | Done |
 | Phase 1 (ML) | XGBoost on lag, rolling, calendar and weather features vs persistence and seasonal-naive baselines | Next |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
@@ -138,7 +139,8 @@ pytest                               # run the data tests
 |:--|:--|
 | Regenerate report figures | `python scripts/plot_preprocessing.py` |
 | Rebuild the report PDF | `cd reports/preprocessing && tectonic preprocessing.tex` |
-| Re-run the walkthrough | `jupyter nbconvert --to notebook --execute --inplace notebooks/01_data_preprocessing.ipynb` |
+| Re-run the EDA | `jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb` |
+| Re-run the preprocessing walkthrough | `jupyter nbconvert --to notebook --execute --inplace notebooks/02_data_preprocessing.ipynb` |
 
 All settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold years, embargo length and scaled columns.
 
@@ -164,13 +166,15 @@ aml_dl_pm2.5/
 │   ├── interim/                   cleaned hourly frame (generated)
 │   └── processed/                 folds and per-fold scalers (generated)
 ├── notebooks/
-│   └── 01_data_preprocessing.ipynb
+│   ├── 01_eda.ipynb               EDA on the original csv
+│   └── 02_data_preprocessing.ipynb  applies the EDA decisions
 ├── reports/
 │   └── preprocessing/             IEEE report, figures, audit summary
 ├── scripts/
 │   └── plot_preprocessing.py      report figures
 ├── src/aqf/
 │   ├── config.py                  config loader
+│   ├── features.py                feature builders, calendar, humidity
 │   ├── viz.py                     shared figures
 │   └── data/                      load, clean, split, scale, audit, pipeline
 ├── tests/
@@ -182,9 +186,9 @@ aml_dl_pm2.5/
 
 ## Roadmap
 
-- [x] Data audit and leak-free preprocessing pipeline
+- [x] Exploratory data analysis on the original data
+- [x] Leak-free preprocessing pipeline
 - [x] Preprocessing report (IEEE format) and walkthrough notebook
-- [ ] Exploratory data analysis notebook
 - [ ] Feature engineering: lags, rolling statistics, calendar and weather features
 - [ ] Persistence, 24-hour seasonal-naive and linear baselines
 - [ ] XGBoost with chronological tuning and feature-group ablation
