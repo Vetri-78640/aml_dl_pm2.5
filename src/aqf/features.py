@@ -34,9 +34,13 @@ def calendar(ts):
 def build(df, cfg):
     """Features at each origin t from rows <= t only, plus their group names.
 
-    Weather and derived weather use rows <= t - weather_lag. A lag of 1 keeps
-    every weather input strictly before the target hour even if the PM2.5 and
-    weather clocks are offset by one hour (open question Q15).
+    Weather, derived and physics features use rows <= t - weather_lag. A lag of 1
+    keeps every weather input strictly before the target hour even if the PM2.5
+    and weather clocks are offset by one hour (open question Q15). Physics
+    features follow the episode literature: stagnation (wind below `stag_ws`
+    and no rain, the surface part of the air stagnation index), southerly
+    transport (SE wind run) and humid build-up (relative humidity above
+    `rh_high`).
     `pm_anom` (needs a training climatology) and the calendar (depends on h)
     are added per fold and horizon by `fold_xy`.
     """
@@ -61,9 +65,18 @@ def build(df, cfg):
     }
     derived |= {f"pres_diff{k}": w["pres"] - w["pres"].shift(k) for k in cfg["pres_diffs"]}
 
-    F = pd.DataFrame(lags | rolling | weather | derived)
+    n = cfg["phys_window"]
+    stag = ((w["ws"] < cfg["stag_ws"]) & (w["rain"] == 0)).astype("int8")
+    physics = {
+        "stag24": stag.rolling(n, min_periods=1).sum(),
+        "stag_run": stag.groupby(stag.ne(stag.shift()).cumsum()).cumsum(),
+        "se_ws24": (w["ws"] * w["wd_se"]).rolling(n, min_periods=1).sum(),
+        "humid24": (derived["rh"] > cfg["rh_high"]).astype("int8").rolling(n, min_periods=1).sum(),
+    }
+
+    F = pd.DataFrame(lags | rolling | weather | derived | physics)
     groups = {"lags": list(lags), "rolling": [*rolling, "pm_anom"], "calendar": CALENDAR,
-              "weather": WEATHER, "derived": list(derived)}
+              "weather": WEATHER, "derived": list(derived), "physics": list(physics)}
     return F, groups
 
 
