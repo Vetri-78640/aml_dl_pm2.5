@@ -80,6 +80,24 @@ def fit_xgb(X, y, params, tail_hours, h, log=True, smear=False, seed=0, delta=Fa
     return Forecaster(full, log, s, delta), n
 
 
+def fit_gate(X, y, threshold, params, tail_hours, h, seed=0):
+    """Classifier for P(y > threshold), early-stopped and refitted like `fit_xgb`."""
+    z = (y > threshold).astype(int)
+    cut = X.index[-1] - pd.Timedelta(hours=tail_hours)
+    fit = X.index <= cut - pd.Timedelta(hours=h)
+    tail = X.index > cut
+    p = {**params, "random_state": seed, "objective": "binary:logistic", "eval_metric": "logloss"}
+    es = xgb.XGBClassifier(**p).fit(X[fit], z[fit], eval_set=[(X[tail], z[tail])], verbose=False)
+    n = es.best_iteration + 1
+    p = {k: v for k, v in p.items() if k != "early_stopping_rounds"}
+    return xgb.XGBClassifier(**{**p, "n_estimators": n}).fit(X, z, verbose=False), n
+
+
+def gate_blend(normal, spike, p, lam=1.0):
+    """normal + lam * p * (spike - normal); lam = 1 is the mixture (1 - p) * normal + p * spike."""
+    return normal + lam * p * (spike - normal)
+
+
 def sample_params(space, n, seed):
     """n random draws from a grid given as {param: [values]}."""
     rng = np.random.default_rng(seed)

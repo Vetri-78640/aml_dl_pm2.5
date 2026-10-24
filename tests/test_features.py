@@ -5,7 +5,7 @@ import pytest
 from aqf.config import load_config
 from aqf.data import clean, fold_mask, load_raw, make_folds
 from aqf.features import build, calendar, fold_xy
-from aqf.models import baselines, fit_xgb
+from aqf.models import baselines, fit_gate, fit_xgb, gate_blend
 
 CFG = load_config("configs/data.yaml")
 P1 = load_config("configs/phase1.yaml")
@@ -109,3 +109,19 @@ def test_change_target_is_not_capped_by_training_range():
     new = pd.DataFrame({"pm_0": [500.0], "noise": [0.0]})
     assert level.predict(new)[0] < 110
     assert abs(change.predict(new)[0] - 505) < 1
+
+
+def test_gate_learns_the_threshold():
+    idx = pd.date_range("2012-01-01", periods=600, freq="h")
+    rng = np.random.default_rng(0)
+    X = pd.DataFrame({"pm_0": rng.uniform(0, 300, 600), "noise": rng.normal(size=600)}, index=idx)
+    params = {"n_estimators": 200, "learning_rate": 0.1, "early_stopping_rounds": 20}
+    m, _ = fit_gate(X, X["pm_0"], 150, params, 100, 1)
+    p = m.predict_proba(pd.DataFrame({"pm_0": [50.0, 250.0], "noise": [0.0, 0.0]}))[:, 1]
+    assert p[0] < 0.1 and p[1] > 0.9
+
+
+def test_gate_blend_limits():
+    normal, spike = np.array([80.0, 80.0]), np.array([200.0, 200.0])
+    assert np.allclose(gate_blend(normal, spike, np.array([0.3, 0.9]), lam=0), normal)
+    assert np.allclose(gate_blend(normal, spike, np.array([1.0, 0.5])), [200, 140])
