@@ -222,3 +222,49 @@ def episode_example(df, start, end):
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
     return fig
+
+
+def horizon_r2(t):
+    """R2 of persistence and XGBoost (left) and RMSE skill (right) per horizon, from the horizon sweep."""
+    p, x = (t[t["model"] == m].set_index("h") for m in ("persistence", "xgb"))
+    pos = range(len(x))
+    fig, (a, b) = plt.subplots(1, 2, figsize=(W, 1.6))
+    a.plot(pos, p["r2"], color=ORANGE, lw=1.2, marker="o", ms=3, label="persistence")
+    a.plot(pos, x["r2"], color=BLUE, lw=1.2, marker="o", ms=3, label="XGBoost")
+    a.axhline(0, color=AXIS, lw=0.5)
+    a.set_ylabel("$R^2$")
+    legend_top(a, 2)
+    b.plot(pos, x["skill_rmse"], color=BLUE, lw=1.2, marker="o", ms=3)
+    b.set_ylabel("RMSE skill")
+    b.yaxis.set_major_formatter(mticker.PercentFormatter(1.0, decimals=0))
+    for ax in (a, b):
+        ax.set_xticks(list(pos), x.index)
+        ax.set_xlabel("horizon h (hours)")
+        ax.grid(axis="x", visible=False)
+    fig.subplots_adjust(wspace=0.6)
+    return fig
+
+
+def ablation_steps(t):
+    """RMSE as feature groups are added one at a time; `t` has columns variant and rmse."""
+    fig, ax = plt.subplots(figsize=(W, 1.5))
+    x = range(len(t))
+    ax.plot(x, t["rmse"], color=BLUE, lw=1.2, marker="o", ms=3)
+    for i, v in zip(x, t["rmse"]):
+        ax.annotate(f"{v:.1f}", (i, v), xytext=(0, 4), textcoords="offset points", ha="center", color=INK2)
+    ax.set_xticks(list(x), t["variant"])
+    ax.set_ylabel("RMSE (µg/m³)")
+    ax.margins(y=0.2)
+    ax.grid(axis="x", visible=False)
+    return fig
+
+
+def calibration(t):
+    """Mean gate probability against the observed episode rate per probability band."""
+    fig, ax = plt.subplots(figsize=(W, 1.6))
+    ax.plot([0, 1], [0, 1], color=AXIS, lw=0.8, ls="--", label="perfect")
+    ax.plot(t["mean_p"], t["episode_rate"], color=BLUE, lw=1.2, marker="o", ms=3, label="gate")
+    ax.set_xlabel("mean predicted probability")
+    ax.set_ylabel("observed episode rate")
+    legend_top(ax, 2)
+    return fig
