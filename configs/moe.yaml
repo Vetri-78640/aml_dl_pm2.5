@@ -1,0 +1,13 @@
+paths:
+  out: reports/moe
+  phase1: reports/phase1/cv_choices.json
+  phase1_scores: reports/phase1/cv_scores.csv
+
+h: 6
+episode: 150
+lam_step: 0.1
+hard_cut: 0.5
+seed_sets:
+  - [0, 1, 2, 3, 4]
+  - [5, 6, 7, 8, 9]
+  - [10, 11, 12, 13, 14]
