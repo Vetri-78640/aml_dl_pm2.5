@@ -35,6 +35,7 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 | Data preprocessing | Leak-free pipeline driven by the EDA findings, walkthrough notebook | Done |
 | Data report | One IEEE report covering EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf) | Done |
 | Phase 1 (ML) | XGBoost and Ridge on lag, rolling, calendar, weather and physics features vs persistence and seasonal-naive baselines: [`notebooks/03_phase1_models.ipynb`](notebooks/03_phase1_models.ipynb) | Done, 2014 scored |
+| Mixture of experts (6 h) | Phase 1 blend as the normal expert, an episode expert and a gate that weights them per hour: [`notebooks/04_moe.ipynb`](notebooks/04_moe.ipynb) | Done, validation years |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
 Every model is scored with rolling chronological backtests on MAE, RMSE and R2 at a fixed horizon, on exactly the same hours.
@@ -137,6 +138,22 @@ Every choice (settings, target form, Ridge alpha, blend weights) was made on 201
 
 Units are µg/m³. After the PM2.5 lags, weather adds the most of any feature group; the physics group (stagnation, southerly transport, humid hours) adds a little more. Validation scores, ablation and feature importance are in [`reports/phase1/`](reports/phase1/).
 
+How the 6 h model got here, run by run: [`reports/model_history.md`](reports/model_history.md).
+
+---
+
+## Mixture of experts at 6 h
+
+Hours above 150 µg/m³ are 21% of the validation hours but half of the Phase 1 blend's squared error. The mixture keeps the Phase 1 blend for normal hours, adds an XGBoost expert trained only on episode hours, and lets an XGBoost classifier decide hour by hour how much each one counts. Validation years 2011 to 2013 only; 2014 was already used for Phase 1.
+
+| Model | RMSE | MAE | R2 |
+|:--|--:|--:|--:|
+| Phase 1 blend | 56.33 | 36.41 | 0.621 |
+| Mixture of experts | 56.26 | 35.99 | 0.622 |
+| Mixture with a perfect gate (uses the true label, not a forecast) | 39.46 | 27.29 | 0.814 |
+
+The mixture lowers MAE by 1.2% in every seed set tried, but its RMSE gain is within seed noise. With a perfect gate the same experts would cut RMSE by 30%, so the limit is spotting when an episode starts or ends, not the experts. Details in [`reports/moe/`](reports/moe/) and the model history.
+
 ---
 
 ## Quick start
@@ -157,7 +174,7 @@ pytest                               # run the tests
 | Re-run the EDA | `jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb` |
 | Re-run the preprocessing walkthrough | `jupyter nbconvert --to notebook --execute --inplace notebooks/02_data_preprocessing.ipynb` |
 
-Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold years, embargo length and scaled columns. Model settings live in [`configs/phase1.yaml`](configs/phase1.yaml): horizons, features, selection metric, search space and seeds.
+Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold years, embargo length and scaled columns. Model settings live in [`configs/phase1.yaml`](configs/phase1.yaml): horizons, features, selection metric, search space and seeds. The mixture of experts reads the frozen Phase 1 choices and its own settings from [`configs/moe.yaml`](configs/moe.yaml).
 
 **Outputs**
 
@@ -168,6 +185,8 @@ Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold
 | `data/processed/scalers/*.json` | one scaler per fold, fitted on training rows |
 | `reports/data/qa.json` | audit numbers used in the report |
 | `reports/phase1/` | validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
+| `reports/moe/` | mixture of experts: scores, error breakdown, gate quality and calibration, lambda curve, seed check |
+| `reports/model_history.md` | every step of the 6 h model with its scores |
 
 ---
 
@@ -177,7 +196,8 @@ Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold
 aml_dl_pm2.5/
 ├── configs/
 │   ├── data.yaml                  pipeline settings
-│   └── phase1.yaml                model settings
+│   ├── phase1.yaml                model settings
+│   └── moe.yaml                   mixture of experts settings
 ├── data/
 │   ├── raw/                       original csv, never modified
 │   ├── interim/                   cleaned hourly frame (generated)
@@ -185,16 +205,19 @@ aml_dl_pm2.5/
 ├── notebooks/
 │   ├── 01_eda.ipynb               EDA on the original csv
 │   ├── 02_data_preprocessing.ipynb  applies the EDA decisions
-│   └── 03_phase1_models.ipynb     baselines, Ridge, XGBoost, 2014 test
+│   ├── 03_phase1_models.ipynb     baselines, Ridge, XGBoost, 2014 test
+│   └── 04_moe.ipynb               mixture of experts at 6 h
 ├── reports/
 │   ├── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
-│   └── phase1/                    validation and test scores
+│   ├── phase1/                    validation and test scores
+│   ├── moe/                       mixture of experts scores
+│   └── model_history.md           how the 6 h model got here
 ├── scripts/
 │   └── plot_data_report.py        data report figures
 ├── src/aqf/
 │   ├── config.py                  config loader
 │   ├── features.py                feature builders, calendar, humidity, physics
-│   ├── models.py                  baselines, Ridge, XGBoost
+│   ├── models.py                  baselines, Ridge, XGBoost, gate
 │   ├── metrics.py                 MAE, RMSE, R2, bias
 │   ├── viz.py                     shared figures
 │   └── data/                      load, clean, split, scale, audit, pipeline
@@ -214,6 +237,7 @@ aml_dl_pm2.5/
 - [x] Feature engineering: lags, rolling statistics, calendar, weather and physics features
 - [x] Persistence, 24-hour seasonal-naive and linear baselines
 - [x] XGBoost with chronological tuning and feature-group ablation
+- [x] Mixture of experts at 6 h: normal expert, episode expert and gate
 - [ ] Phase 1 report and presentation
 - [ ] LSTM or temporal CNN on fixed windows
 - [ ] ML + DL hybrid with ablation studies
