@@ -101,7 +101,7 @@ Let $y_t$ be PM2.5 at hour $t$, the moment the forecast is made. One model predi
 where $\mathbf{x}_t$ holds PM2.5 up to hour $t$, weather up to hour $t-1$, and the calendar of the target hour $t+6$, which is known in advance. Weather is taken one hour early as a safety margin: another UCI release of the same station \cite{fivecities} has the same weather but PM2.5 shifted by one hour, and we cannot tell which clock is right. Missing PM2.5 inputs repeat the last known value for at most three hours; the value a model is scored against is never filled.
 
 \subsection{Folds and test year}
-The data are split by year (Fig.~\ref{fig:folds}; the code calls the folds cv1 to cv3). Fold 1 trains on 2010 and is validated on 2011; fold 2 trains on 2010 and 2011 and is validated on 2012; fold 3 trains on 2010 to 2012 and is validated on 2013. A 24-hour gap before each evaluation year keeps its answers out of training. All settings are chosen on these three validation years, \num{24417} hours in total, the same hours for every model. The final models train on 2010 to 2013 and are tested on 2014.
+The data are split by year (Fig.~\ref{fig:folds}; the code calls the folds cv1 to cv3). Fold 1 trains on 2010 and is validated on 2011; fold 2 trains on 2010 and 2011 and is validated on 2012; fold 3 trains on 2010 to 2012 and is validated on 2013. A 24-hour gap before each evaluation year keeps its answers out of training, and an hour is scored only if its forecast time and its target are both inside the evaluation year. A code review on 19 October 2026, before the first model run, found that this last rule was missing: forecasts made in the last six hours of 2013 would have been checked against PM2.5 values from 2014, the test year. We fixed it and added tests before any model was trained, so no reported score was affected. All settings are chosen on these three validation years, \num{24417} hours in total, the same hours for every model. The final models train on 2010 to 2013 and are tested on 2014.
 
 \begin{figure}[!t]
 \centering
@@ -175,7 +175,7 @@ the sum of the current misses of the $n_j$ training hours in that leaf, shrunk b
 A random search tried 20 settings on the validation years. It chose trees of depth 4, at least 20 hours per leaf, half the inputs per tree and $\lambda = 1$. Each fit uses the last 90 training days to decide when to stop adding trees (about 127 on average) and is then refitted on all training hours. The final forecast averages five models with different random seeds.
 
 \subsection{Blend and target}
-The blend is 0.6~$\times$~XGBoost~$+$~0.4~$\times$~ridge, with weights chosen on a 0.1 grid by validation RMSE. Both models predict PM2.5 directly. Predicting $\log(1 + y)$ instead made forecasts 12.6~\ugm{} too low on average (RMSE 59.96 against 56.81), so we kept the raw value.
+The blend is 0.6~$\times$~XGBoost~$+$~0.4~$\times$~ridge, with weights chosen on a 0.1 grid by validation RMSE. Both models predict PM2.5 directly. Predicting $\log(1 + y)$ instead made XGBoost's forecasts 12.6~\ugm{} too low on average (RMSE 59.96 against 56.81), so we kept the raw value.
 
 \section{Results}
 \label{sec:results}
@@ -205,6 +205,27 @@ Ridge & 54.20 & 36.11 & 0.662 & 11.5\% \\
 XGBoost (5 seeds) & 52.21 & 33.79 & 0.687 & 14.7\% \\
 Blend & 51.96 & 33.93 & 0.690 & 15.1\% \\
 Mixture of experts & \textbf{51.86} & \textbf{33.69} & \textbf{0.691} & \textbf{15.3\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{How the model improved}
+Table~\ref{tab:runs} shows the six-hour model step by step. The first version predicted $\log(1 + y)$ and chose settings by MAE; undoing the log made its forecasts 12.7~\ugm{} too low on average. Predicting PM2.5 directly gave the largest gain. Choosing every setting by RMSE and adding the physics inputs gave the final blend.
+
+\begin{table}[!htb]
+\centering
+\caption{How the six-hour model improved. Skill: how much smaller the RMSE is than that of ``no change''}
+\label{tab:runs}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Step & Change & RMSE & Skill \\
+\midrule
+Run 1 & first version, log target & 59.70 & 9.2\% \\
+Run 2 & predict PM2.5 directly & 56.69 & 13.8\% \\
+Runs 3 and 4 & physics inputs, tuned by RMSE & 56.33 & 14.4\% \\
+Blend, 2014 & scored once & 51.96 & 15.1\% \\
+Mixture, 2014 & final model, scored once & 51.86 & 15.3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
