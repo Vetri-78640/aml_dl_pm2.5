@@ -177,6 +177,8 @@ Units are µg/m³. After the PM2.5 lags, weather adds the most of any feature gr
 
 Full write-up: [`reports/phase1/phase1_report.pdf`](reports/phase1/phase1_report.pdf).
 
+Training and validation scores side by side, for bias and variance: [`notebooks/05_train_vs_validation.ipynb`](notebooks/05_train_vs_validation.ipynb).
+
 How the 6 h model got here, run by run: [`reports/model_history.md`](reports/model_history.md).
 
 ---
@@ -247,6 +249,7 @@ Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold
 | `data/processed/scalers/*.json` | one scaler per fold, fitted on training rows |
 | `reports/data/qa.json` | audit numbers used in the report |
 | `reports/phase1/` | IEEE Phase 1 report and figures, validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
+| `reports/phase1/train_vs_validation.csv` | training against validation scores per fold, blend and mixture |
 | `reports/moe/` | mixture of experts: scores, error breakdown, gate quality and calibration, lambda curve, seed check, 2014 test scores and settings fingerprint |
 | `reports/model_history.md` | every step of the 6 h model with its scores |
 
@@ -268,7 +271,8 @@ aml_dl_pm2.5/
 │   ├── 01_eda.ipynb               EDA on the original csv
 │   ├── 02_data_preprocessing.ipynb  applies the EDA decisions
 │   ├── 03_phase1_models.ipynb     baselines, Ridge, XGBoost, 2014 test
-│   └── 04_moe.ipynb               mixture of experts at 6 h, 2014 test
+│   ├── 04_moe.ipynb               mixture of experts at 6 h, 2014 test
+│   └── 05_train_vs_validation.ipynb  training against validation scores
 ├── reports/
 │   ├── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
 │   ├── phase1/                    IEEE Phase 1 report, figures, validation and test scores
