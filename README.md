@@ -35,10 +35,10 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 |:--|:--|:--|
 | Exploratory analysis | On the original csv: data quality on all years, then patterns on 2010 to 2013 only | Done |
 | Data preprocessing | Leak-free pipeline driven by the EDA findings, walkthrough notebook | Done |
-| Data report | One IEEE report covering EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf) | Done |
+| Data report | One IEEE report covering EDA and preprocessing: [`reports/data_report.pdf`](reports/data_report.pdf) | Done |
 | Phase 1 (ML) | XGBoost and Ridge on lag, rolling, calendar, weather and physics features vs persistence and seasonal-naive baselines: [`notebooks/03_phase1_models.ipynb`](notebooks/03_phase1_models.ipynb) | Done, 2014 scored |
 | Mixture of experts (6 h) | Quiet and spike experts split at 150 µg/m³, mixed hour by hour by a gate: [`notebooks/04_moe.ipynb`](notebooks/04_moe.ipynb) | Done, final model, 2014 scored once |
-| Phase 1 report | IEEE report on the features, models, results and mixture of experts: [`reports/phase1/phase1_report.pdf`](reports/phase1/phase1_report.pdf) | Done |
+| Phase 1 report | IEEE report on the features, models, results and mixture of experts: [`reports/phase1_report.pdf`](reports/phase1_report.pdf) | Done |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
 Every model is scored with expanding-window chronological backtests on MAE, RMSE and R2 at a fixed horizon, on exactly the same hours.
@@ -105,7 +105,7 @@ flowchart LR
 | Folds | Validate on 2011, 2012, 2013; test on 2014 | Every fold sees a full seasonal cycle |
 | Scale | log1p for skewed columns, then z-score from training rows only | No statistics from evaluation years |
 
-Full reasoning, figures and numbers for the EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf).
+Full reasoning, figures and numbers for the EDA and preprocessing: [`reports/data_report.pdf`](reports/data_report.pdf).
 
 ---
 
@@ -175,7 +175,7 @@ Every choice (settings, target form, Ridge alpha, blend weights) was made on 201
 
 Units are µg/m³. After the PM2.5 lags, weather adds the most of any feature group; the physics group (stagnation, southerly transport, humid hours) adds a little more. Validation scores, ablation and feature importance are in [`reports/phase1/`](reports/phase1/).
 
-Full write-up: [`reports/phase1/phase1_report.pdf`](reports/phase1/phase1_report.pdf).
+Full write-up: [`reports/phase1_report.pdf`](reports/phase1_report.pdf).
 
 Training and validation scores side by side, for bias and variance: [`notebooks/05_train_vs_validation.ipynb`](notebooks/05_train_vs_validation.ipynb).
 
@@ -232,9 +232,9 @@ pytest                               # run the tests
 | Task | Command |
 |:--|:--|
 | Regenerate data report figures | `python scripts/plot_data_report.py` |
-| Rebuild the data report PDF | `cd reports/data && tectonic data_report.tex` |
+| Rebuild the data report PDF | `cd reports && tectonic data_report.tex` |
 | Regenerate Phase 1 report figures | `python scripts/plot_phase1_report.py` |
-| Rebuild the Phase 1 report PDF | `cd reports/phase1 && tectonic phase1_report.tex` |
+| Rebuild the Phase 1 report PDF | `cd reports && tectonic phase1_report.tex` |
 | Re-run the EDA | `jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb` |
 | Re-run the preprocessing walkthrough | `jupyter nbconvert --to notebook --execute --inplace notebooks/02_data_preprocessing.ipynb` |
 
@@ -248,7 +248,8 @@ Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold
 | `data/processed/folds.json` | fold boundaries |
 | `data/processed/scalers/*.json` | one scaler per fold, fitted on training rows |
 | `reports/data/qa.json` | audit numbers used in the report |
-| `reports/phase1/` | IEEE Phase 1 report and figures, validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
+| `reports/phase1_report.pdf`, `reports/data_report.pdf` | the two IEEE reports, with their LaTeX sources |
+| `reports/phase1/` | Phase 1 report figures, validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
 | `reports/phase1/train_vs_validation.csv` | training against validation scores per fold, blend and mixture |
 | `reports/moe/` | mixture of experts: scores, error breakdown, gate quality and calibration, lambda curve, seed check, 2014 test scores and settings fingerprint |
 | `reports/model_history.md` | every step of the 6 h model with its scores |
@@ -274,8 +275,10 @@ aml_dl_pm2.5/
 │   ├── 04_moe.ipynb               mixture of experts at 6 h, 2014 test
 │   └── 05_train_vs_validation.ipynb  training against validation scores
 ├── reports/
-│   ├── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
-│   ├── phase1/                    IEEE Phase 1 report, figures, validation and test scores
+│   ├── phase1_report.pdf          IEEE Phase 1 report
+│   ├── data_report.pdf            IEEE data report (EDA + preprocessing)
+│   ├── data/                      data report figures, audit summary
+│   ├── phase1/                    Phase 1 figures, validation and test scores
 │   ├── moe/                       mixture of experts scores
 │   └── model_history.md           how the 6 h model got here
 ├── scripts/
