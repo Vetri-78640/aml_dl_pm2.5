@@ -16,6 +16,7 @@ AML/DL Project 19 - Team T024, Section A
 [Dataset](#dataset) -
 [Pipeline](#preprocessing-pipeline) -
 [Evaluation](#evaluation-protocol) -
+[Model](#phase-1-model) -
 [Quick start](#quick-start) -
 [Structure](#repository-structure) -
 [Roadmap](#roadmap) -
@@ -36,6 +37,7 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 | Data report | One IEEE report covering EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf) | Done |
 | Phase 1 (ML) | XGBoost and Ridge on lag, rolling, calendar, weather and physics features vs persistence and seasonal-naive baselines: [`notebooks/03_phase1_models.ipynb`](notebooks/03_phase1_models.ipynb) | Done, 2014 scored |
 | Mixture of experts (6 h) | Phase 1 blend as the normal expert, an episode expert and a gate that weights them per hour: [`notebooks/04_moe.ipynb`](notebooks/04_moe.ipynb) | Done, validation years |
+| Phase 1 report | IEEE report on the features, models, results and mixture of experts: [`reports/phase1/phase1_report.pdf`](reports/phase1/phase1_report.pdf) | Done |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
 Every model is scored with rolling chronological backtests on MAE, RMSE and R2 at a fixed horizon, on exactly the same hours.
@@ -126,6 +128,40 @@ Each training span stops 24 hours before its evaluation year, so no training tar
 
 ---
 
+## Phase 1 model
+
+One direct model per horizon: the inputs describe hour t and the target is PM2.5 at t + h. The headline 6 h model:
+
+```mermaid
+flowchart LR
+    subgraph IN["52 inputs at forecast hour t"]
+        I1["PM2.5 history (10)<br/>now, 7 lags from 1 to 48 h, missing flags"]
+        I2["rolling statistics (15)<br/>3 to 24 h mean, std and max, changes, anomaly"]
+        I3["calendar of hour t + 6 (7)"]
+        I4["weather at t - 1 (11)"]
+        I5["derived weather (5)<br/>humidity, NW wind run, pressure change"]
+        I6["physics (4)<br/>stagnation, SE wind run, humid hours"]
+        I1 ~~~ I2 ~~~ I3
+        I4 ~~~ I5 ~~~ I6
+    end
+    IN --> X["XGBoost<br/>5 seeds, averaged"]
+    IN --> R["Ridge<br/>median fill, z-score"]
+    X -- "0.6" --> B(("blend"))
+    R -- "0.4" --> B
+    B --> Y["PM2.5 at t + 6"]
+```
+
+| Part | Setting at 6 h | How it was chosen |
+|:--|:--|:--|
+| Inputs | 52 columns in six groups, none from after hour t | groups added one at a time; each lowered the validation error |
+| XGBoost | depth 4, min child weight 20, column sample 0.5, subsample 1.0, L2 penalty 1 | best of 20 random candidates on 2011 to 2013 |
+| Trees | early stopping, then a refit on the whole training span | early stopping on the last 90 days of each training span |
+| Target | PM2.5 level in µg/m³ | lower validation RMSE than log1p and a change target |
+| Ridge | alpha 10; log1p on the PM2.5 level inputs, median fill, z-score | alpha from 0.1 to 1000 on 2011 to 2013 |
+| Blend | 0.6 XGBoost + 0.4 Ridge | weights on a 0.1 grid on 2011 to 2013; a 0.9-quantile spike expert was offered and got weight 0 |
+
+---
+
 ## Phase 1 results
 
 Every choice (settings, target form, Ridge alpha, blend weights) was made on 2011 to 2013 by RMSE. The 2014 test year was then scored once. The selected model is a blend of a 5-seed XGBoost ensemble and Ridge.
@@ -137,6 +173,8 @@ Every choice (settings, target form, Ridge alpha, blend weights) was made on 201
 | 24 h | 99.02 | 81.49 | 17.7% | 0.241 | 59.78 |
 
 Units are µg/m³. After the PM2.5 lags, weather adds the most of any feature group; the physics group (stagnation, southerly transport, humid hours) adds a little more. Validation scores, ablation and feature importance are in [`reports/phase1/`](reports/phase1/).
+
+Full write-up: [`reports/phase1/phase1_report.pdf`](reports/phase1/phase1_report.pdf).
 
 How the 6 h model got here, run by run: [`reports/model_history.md`](reports/model_history.md).
 
@@ -169,8 +207,10 @@ pytest                               # run the tests
 
 | Task | Command |
 |:--|:--|
-| Regenerate report figures | `python scripts/plot_data_report.py` |
-| Rebuild the report PDF | `cd reports/data && tectonic data_report.tex` |
+| Regenerate data report figures | `python scripts/plot_data_report.py` |
+| Rebuild the data report PDF | `cd reports/data && tectonic data_report.tex` |
+| Regenerate Phase 1 report figures | `python scripts/plot_phase1_report.py` |
+| Rebuild the Phase 1 report PDF | `cd reports/phase1 && tectonic phase1_report.tex` |
 | Re-run the EDA | `jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb` |
 | Re-run the preprocessing walkthrough | `jupyter nbconvert --to notebook --execute --inplace notebooks/02_data_preprocessing.ipynb` |
 
@@ -184,7 +224,7 @@ Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold
 | `data/processed/folds.json` | fold boundaries |
 | `data/processed/scalers/*.json` | one scaler per fold, fitted on training rows |
 | `reports/data/qa.json` | audit numbers used in the report |
-| `reports/phase1/` | validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
+| `reports/phase1/` | IEEE Phase 1 report and figures, validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
 | `reports/moe/` | mixture of experts: scores, error breakdown, gate quality and calibration, lambda curve, seed check |
 | `reports/model_history.md` | every step of the 6 h model with its scores |
 
@@ -209,11 +249,12 @@ aml_dl_pm2.5/
 │   └── 04_moe.ipynb               mixture of experts at 6 h
 ├── reports/
 │   ├── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
-│   ├── phase1/                    validation and test scores
+│   ├── phase1/                    IEEE Phase 1 report, figures, validation and test scores
 │   ├── moe/                       mixture of experts scores
 │   └── model_history.md           how the 6 h model got here
 ├── scripts/
-│   └── plot_data_report.py        data report figures
+│   ├── plot_data_report.py        data report figures
+│   └── plot_phase1_report.py      Phase 1 report figures
 ├── src/aqf/
 │   ├── config.py                  config loader
 │   ├── features.py                feature builders, calendar, humidity, physics
@@ -238,7 +279,7 @@ aml_dl_pm2.5/
 - [x] Persistence, 24-hour seasonal-naive and linear baselines
 - [x] XGBoost with chronological tuning and feature-group ablation
 - [x] Mixture of experts at 6 h: normal expert, episode expert and gate
-- [ ] Phase 1 report and presentation
+- [x] Phase 1 report and presentation
 - [ ] LSTM or temporal CNN on fixed windows
 - [ ] ML + DL hybrid with ablation studies
 - [ ] Phase 2 report and presentation
