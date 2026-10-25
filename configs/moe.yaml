@@ -2,7 +2,9 @@ paths:
   out: reports/moe
   phase1: reports/phase1/cv_choices.json
   phase1_scores: reports/phase1/cv_scores.csv
+  phase1_test: reports/phase1/test_scores.csv
 
+final: moe_split          # final 6 h model, chosen on cv1 to cv3 before its 2014 score
 h: 6
 episode: 150
 lam_step: 0.1
