@@ -1,8 +1,9 @@
 {
   "features": 0.0,
-  "normal expert": 8.9,
-  "spike expert": 5.9,
+  "normal expert": 10.0,
+  "spike expert": 6.1,
   "gate": 9.9,
-  "quiet expert": 11.8,
-  "seed check": 116.7
+  "quiet expert": 12.2,
+  "seed check": 117.9,
+  "test 2014": 16.9
 }
