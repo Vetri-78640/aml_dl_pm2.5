@@ -17,6 +17,7 @@ AML/DL Project 19 - Team T024, Section A
 [Pipeline](#preprocessing-pipeline) -
 [Evaluation](#evaluation-protocol) -
 [Model](#phase-1-model) -
+[Mixture of experts](#mixture-of-experts-at-6-h) -
 [Quick start](#quick-start) -
 [Structure](#repository-structure) -
 [Roadmap](#roadmap) -
@@ -36,11 +37,11 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 | Data preprocessing | Leak-free pipeline driven by the EDA findings, walkthrough notebook | Done |
 | Data report | One IEEE report covering EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf) | Done |
 | Phase 1 (ML) | XGBoost and Ridge on lag, rolling, calendar, weather and physics features vs persistence and seasonal-naive baselines: [`notebooks/03_phase1_models.ipynb`](notebooks/03_phase1_models.ipynb) | Done, 2014 scored |
-| Mixture of experts (6 h) | Phase 1 blend as the normal expert, an episode expert and a gate that weights them per hour: [`notebooks/04_moe.ipynb`](notebooks/04_moe.ipynb) | Done, validation years |
+| Mixture of experts (6 h) | Quiet and spike experts split at 150 µg/m³, mixed hour by hour by a gate: [`notebooks/04_moe.ipynb`](notebooks/04_moe.ipynb) | Done, validation years |
 | Phase 1 report | IEEE report on the features, models, results and mixture of experts: [`reports/phase1/phase1_report.pdf`](reports/phase1/phase1_report.pdf) | Done |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
-Every model is scored with rolling chronological backtests on MAE, RMSE and R2 at a fixed horizon, on exactly the same hours.
+Every model is scored with expanding-window chronological backtests on MAE, RMSE and R2 at a fixed horizon, on exactly the same hours.
 
 ---
 
@@ -76,7 +77,7 @@ Every model is scored with rolling chronological backtests on MAE, RMSE and R2 a
 
 - **Strong persistence.** Autocorrelation is 0.96 at 1 hour, 0.39 at 24 hours and 0.01 at one week, so the seasonal-naive baseline uses a 24-hour lag.
 - **Daily and seasonal cycles.** The hourly mean peaks at 01:00 (114) and is lowest at 15:00 (86); monthly means range from 80.6 in April to 115.1 in October. Winter and summer have opposite daily shapes.
-- **Wind and humidity drive pollution.** Mean PM2.5 is 127 under calm wind and 69 under north-west wind, and relative humidity has the strongest rank correlation with PM2.5 (0.54).
+- **Wind and humidity drive pollution.** Mean PM2.5 is 127 under calm wind and 69 under north-west wind, and relative humidity has the strongest same-hour rank correlation with PM2.5 (0.54); six hours ahead, wind speed is stronger (-0.46 against 0.39).
 - **Running totals, not readings.** `Iws`, `Is` and `Ir` accumulate until the wind direction or weather changes, so they are decoded before use.
 - **Heavy right tail.** Skewness 1.8, reduced to -0.3 by log1p. The two highest values fall in the first hours of the Lunar New Year and are kept as real episodes.
 
@@ -182,7 +183,18 @@ How the 6 h model got here, run by run: [`reports/model_history.md`](reports/mod
 
 ## Mixture of experts at 6 h
 
-Hours above 150 µg/m³ are 21% of the validation hours but half of the Phase 1 blend's squared error. The mixture keeps the Phase 1 blend for normal hours, adds an XGBoost expert trained only on episode hours, and lets an XGBoost classifier decide hour by hour how much each one counts. Validation years 2011 to 2013 only; 2014 was already used for Phase 1.
+Hours above 150 µg/m³ are 21% of the validation hours but half of the Phase 1 blend's squared error. The mixture splits the training hours at 150: a quiet expert with the Phase 1 recipe learns the hours at or below it, a spike expert the hours above, and a gate estimates for each hour the chance p that PM2.5 six hours later is above 150 and mixes the two experts by it. Validation years 2011 to 2013 only; 2014 was already used for Phase 1.
+
+```mermaid
+flowchart LR
+    IN["same 52 inputs at t"] --> Q["quiet expert<br/>0.6 XGBoost + 0.4 Ridge<br/>trained on hours with target ≤ 150"]
+    IN --> S["spike expert<br/>XGBoost, 5 seeds<br/>trained on hours with target > 150"]
+    IN --> G["gate<br/>XGBoost classifier, 5 seeds<br/>p = P(PM2.5 at t + 6 > 150)"]
+    Q -- "× (1 - p)" --> M(("soft mix"))
+    S -- "× p" --> M
+    G -. "p" .-> M
+    M --> Y["PM2.5 at t + 6"]
+```
 
 | Model | RMSE | MAE | R2 |
 |:--|--:|--:|--:|
@@ -190,7 +202,7 @@ Hours above 150 µg/m³ are 21% of the validation hours but half of the Phase 1 
 | Mixture of experts | 56.26 | 35.99 | 0.622 |
 | Mixture with a perfect gate (uses the true label, not a forecast) | 39.46 | 27.29 | 0.814 |
 
-The mixture lowers MAE by 1.2% in every seed set tried, but its RMSE gain is within seed noise. With a perfect gate the same experts would cut RMSE by 30%, so the limit is spotting when an episode starts or ends, not the experts. Details in [`reports/moe/`](reports/moe/) and the model history.
+The mixture lowers MAE by 1.1 to 1.3% in every seed set tried, but its RMSE gain is within seed noise. With a perfect gate the same experts would cut RMSE by 30%, so the limit is spotting when an episode starts or ends, not the experts. Details in [`reports/moe/`](reports/moe/) and the model history.
 
 ---
 
@@ -278,7 +290,7 @@ aml_dl_pm2.5/
 - [x] Feature engineering: lags, rolling statistics, calendar, weather and physics features
 - [x] Persistence, 24-hour seasonal-naive and linear baselines
 - [x] XGBoost with chronological tuning and feature-group ablation
-- [x] Mixture of experts at 6 h: normal expert, episode expert and gate
+- [x] Mixture of experts at 6 h: quiet expert, spike expert and gate
 - [x] Phase 1 report and presentation
 - [ ] LSTM or temporal CNN on fixed windows
 - [ ] ML + DL hybrid with ablation studies
