@@ -7,8 +7,8 @@ __pycache__/
 
 data/interim/*
 data/processed/*
-!data/interim/.gitkeep
-!data/processed/.gitkeep
+!data/interim/README.md
+!data/processed/README.md
 
 *.aux
 *.log
