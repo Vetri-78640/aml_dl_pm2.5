@@ -36,7 +36,7 @@
 \maketitle
 
 \begin{abstract}
-We forecast hourly PM2.5 at the US Embassy in Beijing one, six and 24 hours ahead, with six hours as the headline horizon, using only information available when the forecast is made. A model sees 52 inputs in six groups: PM2.5 history, rolling statistics, the calendar of the target hour, weather from the hour before the forecast, derived weather, and physics features for stagnation, southerly transport and humid build-up taken from the Beijing episode and air stagnation literature. XGBoost is tuned by random search, averaged over five seeds and blended with ridge regression. Every tuned setting is chosen on three expanding-window validation years (2011 to 2013) with a 24-hour embargo, and the 2014 test year is scored once. At six hours the blend reaches an RMSE of 51.96~\ugm, MAE 33.93 and $R^2$ 0.690 on 2014, against 61.22, 38.67 and 0.569 for persistence: 15.1\% lower RMSE, close to the 14.4\% measured during validation. Added after PM2.5 history and the calendar, weather gives the largest gain, and a raw target beats log1p, which biases forecasts low by 12.6~\ugm. Errors concentrate in high-pollution hours: hours above 150~\ugm{} are 21.2\% of validation hours but carry 50.6\% of the squared error. A mixture of experts with a learned gate for hours above 150~\ugm{} lowers validation MAE by 1.1 to 1.3\% in every seed set, but its RMSE gain is within seed noise; with the true label as gate the same experts would cut validation RMSE by 30\%, which locates the remaining limit in predicting when episodes start and end.
+We forecast hourly PM2.5 at the US Embassy in Beijing one, six and 24 hours ahead, with six hours as the headline horizon, using only information available when the forecast is made. A model sees 52 inputs in six groups: PM2.5 history, rolling statistics, the calendar of the target hour, weather from the hour before the forecast, derived weather, and physics features for stagnation, southerly transport and humid build-up taken from the Beijing episode and air stagnation literature. XGBoost is tuned by random search, averaged over five seeds and blended with ridge regression. Every tuned setting is chosen on three expanding-window validation years (2011 to 2013) with a 24-hour embargo, and each final model is scored once on the 2014 test year after its settings are fixed. At six hours the blend reaches an RMSE of 51.96~\ugm, MAE 33.93 and $R^2$ 0.690 on 2014, against 61.22, 38.67 and 0.569 for persistence: 15.1\% lower RMSE, close to the 14.4\% measured during validation. Added after PM2.5 history and the calendar, weather gives the largest gain, and a raw target beats log1p, which biases forecasts low by 12.6~\ugm. Errors concentrate in high-pollution hours: hours above 150~\ugm{} are 21.2\% of validation hours but carry 50.6\% of the squared error. A mixture of experts with a learned gate for hours above 150~\ugm{} lowers validation MAE by 1.1 to 1.3\% in every seed set with an RMSE gain within seed noise; chosen as the final model on that evidence and then scored once on 2014, it reaches MAE 33.69, RMSE 51.86 and $R^2$ 0.691. With the true label as gate the same experts would cut validation RMSE by 30\%, which locates the remaining limit in predicting when episodes start and end.
 \end{abstract}
 
 \section{Introduction}
@@ -46,10 +46,10 @@ This project compares gradient boosting (Phase 1, this report) with recurrent an
 
 Our contributions are:
 \begin{itemize}
-\item a direct forecasting setup with explicit look-ahead rules, an embargo between training and evaluation, and a test year guarded so that it can be scored only once (Section~\ref{sec:protocol});
+\item a direct forecasting setup with explicit look-ahead rules, an embargo between training and evaluation, and a test year guarded so that each model can be scored on it only once (Section~\ref{sec:protocol});
 \item physics-informed features from the Beijing episode literature and a five-seed ablation of every feature group and target form (Sections~\ref{sec:features} and \ref{sec:ablation});
 \item a tuned XGBoost and ridge blend that beats persistence by 15.1\% RMSE at six hours on the unseen year 2014 (Section~\ref{sec:results});
-\item an error analysis by season and pollution episode, and a mixture-of-experts extension that shows where the remaining error comes from (Sections~\ref{sec:errors} and \ref{sec:moe}).
+\item an error analysis by season and pollution episode, and a mixture of experts, chosen on validation as the final model, that also shows where the remaining error comes from (Sections~\ref{sec:errors} and \ref{sec:moe}).
 \end{itemize}
 
 \section{Related work}
@@ -124,7 +124,7 @@ R^2 = 1 - \frac{\sum_i e_i^2}{\sum_i (y_i - \bar{y})^2}, \qquad \text{skill} = 1
 with MAE, RMSE and the bias $\bar{e}$ in \ugm{} on the original scale and $R^2$ and skill unitless. Every tuned choice (hyperparameters, target form, ridge penalty, blend weights) minimises RMSE pooled over cv1 to cv3; fixed settings such as the fill limit, weather lag, embargo, lags and physics thresholds come from the EDA on 2010 to 2013 and the literature. Both models train on squared error, which RMSE measures, and on a fixed set of hours RMSE and $R^2$ rank models identically. Because choices are made and scored on the same folds, validation scores are slightly optimistic; the test year is the honest estimate.
 
 \subsection{Score-once test year}
-All settings were frozen before 2014 was scored, once, on 2026-10-19. The scoring step refuses to run if test scores already exist and stores a SHA-256 fingerprint of the Phase 1 configuration and the chosen settings, so a second look at the test year cannot happen silently.
+All settings were frozen before 2014 was scored, once, on 2026-10-19. The scoring step refuses to run if test scores already exist and stores a SHA-256 fingerprint of the Phase 1 configuration and the chosen settings, so a second look at the test year cannot happen silently. The mixture of experts (Section~\ref{sec:moe}) was chosen as the final model on the validation years, and the choice was committed to the repository before 2014 was scored for it, once, on 2026-10-25, behind its own guard and fingerprint; no choice was made from a test score.
 
 \section{Features}
 \label{sec:features}
@@ -338,7 +338,7 @@ Correct above-150 call & 86.1 & \textbf{87.7} \\
 
 \section{Extension: mixture of experts}
 \label{sec:moe}
-The quantile spike expert received no weight in the blend; a likely reason is that a fixed weight lifts every hour. A mixture of experts \cite{jacobs1991} lets a gate weight an expert hour by hour. We built one with a new spike expert at six hours on the validation years only; 2014 is not used.
+The quantile spike expert received no weight in the blend; a likely reason is that a fixed weight lifts every hour. A mixture of experts \cite{jacobs1991} lets a gate weight an expert hour by hour. We built one with a new spike expert at six hours on the validation years, chose it there as the final model, and only then scored it once on 2014 (Section~\ref{sec:moetest}).
 
 \subsection{Design}
 The normal expert is the frozen blend. The spike expert is XGBoost with squared error trained only on hours whose target exceeds 150~\ugm{} (\num{1952}, \num{3735} and \num{5358} training hours in cv1 to cv3). A gate, an XGBoost classifier with the same inputs and settings, estimates $p = P(y_{t+6} > 150 \mid \mathbf{x}_t)$. Two combinations are compared:
@@ -398,17 +398,21 @@ Split, true label & 39.46 & 27.29 & 64.88 & 54.93 & 42.26 \\
 \end{tabular}
 \end{table}
 
+\subsection{Test year}
+\label{sec:moetest}
+The soft split was fixed as the final model on the validation evidence above, lower MAE in every seed set and level RMSE, and committed before 2014 was scored for it. Retrained on 2010 to 2013 with the same settings and scored once on the same 2014 hours as the blend, it reaches RMSE 51.86, MAE 33.69 and $R^2$ 0.691 against 51.96, 33.93 and 0.690 for the blend. MAE is 0.7\% lower, less than the 1.2\% on validation, and the RMSE difference of 0.10 is within the seed variation seen on validation, so the mixture is better than the blend on MAE and level with it on RMSE.
+
 \section{Discussion and limitations}
 \label{sec:discussion}
 The mixture result suggests why further feature or model tuning brings little. With an exact gate, a soft mixture estimates the same conditional mean as a single regression on the same inputs, so it has little to add when the gate reads the same inputs. Its weakest case is clearing (AUC 0.734); a plausible reason, not tested here, is that the north-west wind that ends an episode often arrives after the last weather input at $t-1$. Larger gains need more information, such as a longer input history, upstream stations or weather forecasts.
 
-Validation scores are selection scores and slightly optimistic, and RMSE is a noisy selection metric here: with half of the squared error in a fifth of the hours, small differences between models are not reliable, which is why the mixture-of-experts gains are checked over three seed sets. The data come from one station without PM10, other pollutants or boundary-layer height. The one-hour weather lag guards against an unresolved clock offset between PM2.5 and weather and may cost some accuracy if the clocks agree. The air quality categories are applied to hourly values. Finally, 2014 is a single test year, and an easier one than the validation years.
+Validation scores are selection scores and slightly optimistic, and RMSE is a noisy selection metric here: with half of the squared error in a fifth of the hours, small differences between models are not reliable, which is why the mixture-of-experts gains are checked over three seed sets. The data come from one station without PM10, other pollutants or boundary-layer height. The one-hour weather lag guards against an unresolved clock offset between PM2.5 and weather and may cost some accuracy if the clocks agree. The air quality categories are applied to hourly values. Finally, 2014 is a single test year, an easier one than the validation years, and it has now scored two models, each fixed on validation beforehand.
 
 \section{Conclusion and Phase 2}
-A leak-free gradient boosting pipeline forecasts PM2.5 six hours ahead with 15.1\% lower RMSE than persistence on an unseen year, using PM2.5 history, weather and physics-informed stagnation features. The remaining error sits in the onset and clearing of pollution episodes, and a gate that knew the true label would cut validation RMSE by 30\% against the blend. Phase 2 will train an LSTM or temporal CNN on fixed input windows under the same folds and test protocol, and will test whether a recurrent gate that reads a longer history can supply the information the tree-based gate lacks.
+A leak-free gradient boosting pipeline forecasts PM2.5 six hours ahead with 15.1\% lower RMSE than persistence on an unseen year (15.3\% for the final mixture of experts, which also lowers MAE by 0.7\%), using PM2.5 history, weather and physics-informed stagnation features. The remaining error sits in the onset and clearing of pollution episodes, and a gate that knew the true label would cut validation RMSE by 30\% against the blend. Phase 2 will train an LSTM or temporal CNN on fixed input windows under the same folds and test protocol, and will test whether a recurrent gate that reads a longer history can supply the information the tree-based gate lacks.
 
 \section*{Reproducibility}
-The code is public at \url{https://github.com/Vetri-78640/aml_dl_pm2.5}: a Python package (\texttt{src/aqf}) for data, features, models, metrics and figures, configuration files for the data, Phase 1 and the mixture of experts, four notebooks (EDA, preprocessing, Phase 1 models, mixture of experts) and 22 automated tests covering the data pipeline, causality, the embargo and model behaviour. The Phase 1 notebook runs in about seven minutes and the mixture-of-experts notebook in under three; scores are saved as CSV files and settings, timings and the test fingerprint as JSON under \texttt{reports/}.
+The code is public at \url{https://github.com/Vetri-78640/aml_dl_pm2.5}: a Python package (\texttt{src/aqf}) for data, features, models, metrics and figures, configuration files for the data, Phase 1 and the mixture of experts, four notebooks (EDA, preprocessing, Phase 1 models, mixture of experts) and 22 automated tests covering the data pipeline, causality, the embargo and model behaviour. The Phase 1 notebook runs in about seven minutes and the mixture-of-experts notebook in under three; scores are saved as CSV files and settings, timings and the test fingerprints as JSON under \texttt{reports/}.
 
 \section*{Team contributions}
 \begin{itemize}
