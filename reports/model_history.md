@@ -15,8 +15,9 @@ All scores are pooled over the validation years 2011 to 2013 (folds cv1 to cv3) 
 | Runs 3 and 4 | chosen by RMSE, physics features, level or change target, spike expert tested | 56.330 | 36.410 | 0.621 | 14.4% | 1.634 |
 | 2014 test | runs 3 and 4 settings, scored once | 51.963 | 33.930 | 0.690 | 15.1% | 2.341 |
 | Mixture of experts | normal expert + spike expert + gate (`moe_split`) | 56.256 | 35.991 | 0.622 | 14.5% | 2.209 |
+| Mixture of experts, 2014 test | final model, fixed on validation, scored once | 51.858 | 33.686 | 0.691 | 15.3% | 2.562 |
 
-The 2014 row is the only test score. 2014 is an easier year (persistence R2 0.569 against 0.483 on 2011 to 2013), so compare it with the others through skill, not raw error.
+The two 2014 rows are the only test scores; each model was fixed on validation before it was scored. 2014 is an easier year (persistence R2 0.569 against 0.483 on 2011 to 2013), so compare it with the others through skill, not raw error.
 
 ## Run 1 - first model
 
@@ -69,7 +70,7 @@ The runs 3 and 4 settings were retrained on 2010 to 2013 and scored once on 2014
 
 ## Mixture of experts
 
-[`notebooks/04_moe.ipynb`](../notebooks/04_moe.ipynb), validation years only. 2014 was already used for Phase 1, so it is not scored here.
+[`notebooks/04_moe.ipynb`](../notebooks/04_moe.ipynb). `moe_split` was chosen as the final model on the validation years below, and only then scored once on 2014 (step 11).
 
 **Why.** Hours above 150 are 21.2% of the validation hours but 50.6% of the blend's squared error, and the blend predicts them 55.296 too low on average. The Phase 1 spike expert failed because one fixed weight applied to every hour. A gate can weight it hour by hour.
 
@@ -97,9 +98,11 @@ Combinations: `moe_gate` = normal + lambda * p * (spike - normal), lambda chosen
 
 **Result.** The mixture lowers MAE by 1.15% but does not clearly lower RMSE, the metric we select by. With perfect episode detection the same experts would reach RMSE 39.457, so the experts are good enough and the gate is the bottleneck. The gate sees only the hours up to the forecast; telling whether an episode will start or end in the next 6 hours needs more information, such as a longer history (an LSTM gate is a Phase 2 candidate) or a weather forecast.
 
+**2014 test.** Fixed as the final model on the evidence above (MAE lower in every seed set, RMSE level) and committed before scoring, `moe_split` was retrained on 2010 to 2013 and scored once on 2014: RMSE 51.858, MAE 33.686, R2 0.691, against 51.963, 33.930 and 0.690 for the Phase 1 blend. MAE is 0.72% lower, less than on validation (1.15%); the RMSE difference is within the seed noise seen on validation.
+
 ## Files
 
 | Step | Notebook | Results |
 |:--|:--|:--|
 | Runs 1 to 4, 2014 test | `notebooks/03_phase1_models.ipynb` | `reports/phase1/` |
-| Mixture of experts | `notebooks/04_moe.ipynb` | `reports/moe/` |
+| Mixture of experts, 2014 test | `notebooks/04_moe.ipynb` | `reports/moe/` |

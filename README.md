@@ -37,7 +37,7 @@ This project forecasts the concentration of fine particulate matter (PM2.5) a sh
 | Data preprocessing | Leak-free pipeline driven by the EDA findings, walkthrough notebook | Done |
 | Data report | One IEEE report covering EDA and preprocessing: [`reports/data/data_report.pdf`](reports/data/data_report.pdf) | Done |
 | Phase 1 (ML) | XGBoost and Ridge on lag, rolling, calendar, weather and physics features vs persistence and seasonal-naive baselines: [`notebooks/03_phase1_models.ipynb`](notebooks/03_phase1_models.ipynb) | Done, 2014 scored |
-| Mixture of experts (6 h) | Quiet and spike experts split at 150 µg/m³, mixed hour by hour by a gate: [`notebooks/04_moe.ipynb`](notebooks/04_moe.ipynb) | Done, validation years |
+| Mixture of experts (6 h) | Quiet and spike experts split at 150 µg/m³, mixed hour by hour by a gate: [`notebooks/04_moe.ipynb`](notebooks/04_moe.ipynb) | Done, final model, 2014 scored once |
 | Phase 1 report | IEEE report on the features, models, results and mixture of experts: [`reports/phase1/phase1_report.pdf`](reports/phase1/phase1_report.pdf) | Done |
 | Phase 2 (DL) | LSTM or temporal CNN on fixed windows, then an optional ML + DL hybrid | Planned |
 
@@ -118,7 +118,7 @@ Full reasoning, figures and numbers for the EDA and preprocessing: [`reports/dat
 | cv3 | 2010 - 2012 | 2013 | 26,280 | 8,678 |
 | test | 2010 - 2013 | 2014 | 35,040 | 8,661 |
 
-Each training span stops 24 hours before its evaluation year, so no training target can fall inside it for horizons up to 24 hours. 2014 is scored once, at the end.
+Each training span stops 24 hours before its evaluation year, so no training target can fall inside it for horizons up to 24 hours. Each final model is scored once on 2014, after its settings are fixed.
 
 **Leakage guarantees, each checked by a test in [`tests/test_data.py`](tests/test_data.py)**
 
@@ -165,7 +165,7 @@ flowchart LR
 
 ## Phase 1 results
 
-Every choice (settings, target form, Ridge alpha, blend weights) was made on 2011 to 2013 by RMSE. The 2014 test year was then scored once. The selected model is a blend of a 5-seed XGBoost ensemble and Ridge.
+Every choice (settings, target form, Ridge alpha, blend weights) was made on 2011 to 2013 by RMSE. The 2014 test year was then scored once. The selected Phase 1 model is a blend of a 5-seed XGBoost ensemble and Ridge; the final model is the [mixture of experts](#mixture-of-experts-at-6-h) built on it.
 
 | Horizon | Persistence RMSE | Best model RMSE | Better by | R2 | MAE |
 |:--|--:|--:|--:|--:|--:|
@@ -183,7 +183,7 @@ How the 6 h model got here, run by run: [`reports/model_history.md`](reports/mod
 
 ## Mixture of experts at 6 h
 
-Hours above 150 µg/m³ are 21% of the validation hours but half of the Phase 1 blend's squared error. The mixture splits the training hours at 150: a quiet expert with the Phase 1 recipe learns the hours at or below it, a spike expert the hours above, and a gate estimates for each hour the chance p that PM2.5 six hours later is above 150 and mixes the two experts by it. Validation years 2011 to 2013 only; 2014 was already used for Phase 1.
+Hours above 150 µg/m³ are 21% of the validation hours but half of the Phase 1 blend's squared error. The mixture splits the training hours at 150: a quiet expert with the Phase 1 recipe learns the hours at or below it, a spike expert the hours above, and a gate estimates for each hour the chance p that PM2.5 six hours later is above 150 and mixes the two experts by it. It was chosen as the final model on the validation years 2011 to 2013 and only then scored once on 2014.
 
 ```mermaid
 flowchart LR
@@ -203,6 +203,16 @@ flowchart LR
 | Mixture with a perfect gate (uses the true label, not a forecast) | 39.46 | 27.29 | 0.814 |
 
 The mixture lowers MAE by 1.1 to 1.3% in every seed set tried, but its RMSE gain is within seed noise. With a perfect gate the same experts would cut RMSE by 30%, so the limit is spotting when an episode starts or ends, not the experts. Details in [`reports/moe/`](reports/moe/) and the model history.
+
+**2014 test, scored once after the choice was fixed**
+
+| Model | RMSE | MAE | R2 |
+|:--|--:|--:|--:|
+| Persistence | 61.22 | 38.67 | 0.569 |
+| Phase 1 blend | 51.96 | 33.93 | 0.690 |
+| Mixture of experts (final) | 51.86 | 33.69 | 0.691 |
+
+MAE is 0.7% lower than the blend, less than the 1.2% on validation; the RMSE difference is within seed noise.
 
 ---
 
@@ -237,7 +247,7 @@ Data settings live in [`configs/data.yaml`](configs/data.yaml): fill limit, fold
 | `data/processed/scalers/*.json` | one scaler per fold, fitted on training rows |
 | `reports/data/qa.json` | audit numbers used in the report |
 | `reports/phase1/` | IEEE Phase 1 report and figures, validation scores, search, ablation, importance, 2014 test scores and settings fingerprint |
-| `reports/moe/` | mixture of experts: scores, error breakdown, gate quality and calibration, lambda curve, seed check |
+| `reports/moe/` | mixture of experts: scores, error breakdown, gate quality and calibration, lambda curve, seed check, 2014 test scores and settings fingerprint |
 | `reports/model_history.md` | every step of the 6 h model with its scores |
 
 ---
@@ -258,7 +268,7 @@ aml_dl_pm2.5/
 │   ├── 01_eda.ipynb               EDA on the original csv
 │   ├── 02_data_preprocessing.ipynb  applies the EDA decisions
 │   ├── 03_phase1_models.ipynb     baselines, Ridge, XGBoost, 2014 test
-│   └── 04_moe.ipynb               mixture of experts at 6 h
+│   └── 04_moe.ipynb               mixture of experts at 6 h, 2014 test
 ├── reports/
 │   ├── data/                      IEEE data report (EDA + preprocessing), figures, audit summary
 │   ├── phase1/                    IEEE Phase 1 report, figures, validation and test scores
